@@ -15,9 +15,9 @@ find_package(OpenSSL REQUIRED)
 include_directories("C:/Program Files/OpenSSL-Win64/include")
 
 add_executable(LibcryptoAES main.c)
-add_executable(AES_128 AES_128.c)
-add_executable(AES_192 AES_192.c)
-add_executable(AES_256 AES_256.c)
+add_executable(AES_128 AES_128_CBC.c)
+add_executable(AES_192 AES_192_CBC.c)
+add_executable(AES_256 AES_256_CBC.c)
 
 target_link_libraries(LibcryptoAES "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MTd/libssl.lib" "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MTd/libcrypto.lib")
 target_link_libraries(AES_128 "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MTd/libssl.lib" "C:/Program Files/OpenSSL-Win64/lib/VC/x64/MTd/libcrypto.lib")

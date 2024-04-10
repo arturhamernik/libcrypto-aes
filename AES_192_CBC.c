@@ -1,5 +1,5 @@
 #include <string.h>
-#include <stdlib.h>
+#include "IV.h"
 #include <openssl/applink.c>
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -12,6 +12,11 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
 
 int main(void) {
     clock_t start, end;
+
+    // Set up the key and iv...
+    //unsigned char *iv = (unsigned char *)"0123456789012345";
+    unsigned char iv[16]; // For AES, an IV size of 128 bits (16 bytes) is typical.
+    generateSecureIV(iv, sizeof(iv));
 
     // Open the file containing the key
     FILE *key_file = NULL;
@@ -38,9 +43,6 @@ int main(void) {
     size_t keyReadSize = fread(key, 1, keyFilesize, key_file);
     key[keyReadSize] = '\0'; // Null-terminate the key
     fclose(key_file); // Close the file
-
-    // Set up the key and iv...
-    unsigned char *iv = (unsigned char *)"0123456789012345";
 
     // Open the file containing the plaintext
     FILE *file = NULL;
@@ -87,7 +89,7 @@ int main(void) {
     BIO_dump_fp(stdout, (const char *)ciphertext, ciphertext_len);*/
     // Calculating total time taken by the program.
     double time_taken = (double)(end - start) / (double)(CLOCKS_PER_SEC);
-    printf("Time taken %f seconds", time_taken);
+    printf("%f", time_taken);
 
     int decryptedtext_len = decrypt(ciphertext, ciphertext_len, key, iv, &decryptedtext);
     if (decryptedtext_len < 0) {
