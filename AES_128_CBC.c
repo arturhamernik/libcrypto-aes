@@ -1,5 +1,6 @@
 #include <string.h>
 #include "IV.h"
+#include "Common.h"
 #include <openssl/applink.c>
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -18,88 +19,41 @@ int main(void) {
    32 bit system.  */
 
     clock_t start, end;
-
     // Set up the key and iv...
-    //unsigned char *iv = (unsigned char *)"0123456789012345";
     unsigned char iv[16]; // For AES, an IV size of 128 bits (16 bytes) is typical.
     generateSecureIV(iv, sizeof(iv));
-
-    // Open the file containing the key
-    FILE *key_file = NULL;
-    errno_t key_err = fopen_s(&key_file, "H:/Praca_dyplomowa/Impl/LibcryptoAES/keys/128.txt", "r");
-
-    if (key_file == NULL) {
-        printf("Error! Could not open file\n");
-        exit(-1); // must include stdlib.h
-    }
-
-    if (key_err != 0 || !key_file) handleErrors();
-
-    // Seek to the end of the file to determine its size
-    fseek(key_file, 0, SEEK_END);
-    long keyFilesize = ftell(key_file);
-    rewind(key_file); // Go back to the start of the file
-
-
-    // Allocate memory for reading the key. Add 1 for null terminator.
-    unsigned char *key = malloc(keyFilesize + 1);
-    if (!key) handleErrors();
-
-    // Read the file into memory and null-terminate the string
-    size_t keyReadSize = fread(key, 1, keyFilesize, key_file);
-    key[keyReadSize] = '\0'; // Null-terminate the key
-    fclose(key_file); // Close the file
-
-    // Open the file containing the plaintext
-    FILE *file = NULL;
-    errno_t err = fopen_s(&file, "H:/Praca_dyplomowa/Impl/LibcryptoAES/test/100mb.txt", "r");
-
-    if (file == NULL) {
-        printf("Error! Could not open file\n");
-        exit(-1); // must include stdlib.h
-    }
-
-    if (err != 0 || !file) handleErrors();
-
-    // Seek to the end of the file to determine its size
-    fseek(file, 0, SEEK_END);
-    long filesize = ftell(file);
-    rewind(file); // Go back to the start of the file
-
-
-    // Allocate memory for reading the plaintext. Add 1 for null terminator.
-    unsigned char *plaintext = malloc(filesize + 1);
-    if (!plaintext) handleErrors();
-
-    // Read the file into memory and null-terminate the string
-    size_t readSize = fread(plaintext, 1, filesize, file);
-    plaintext[readSize] = '\0'; // Null-terminate the plaintext
-    fclose(file); // Close the file
+    //Set up key
+    unsigned char* key = readFile("H:/Praca_dyplomowa/Impl/LibcryptoAES/keys/128.txt");
+    //Load plaintext
+    unsigned char* plaintext = readFile("H:/Praca_dyplomowa/Impl/LibcryptoAES/test/100mb.txt");
 
     // Encryption and decryption as before...
     // Dynamically allocate ciphertext buffer based on plaintext size
     unsigned char *ciphertext = NULL;
     unsigned char *decryptedtext = NULL;
+    int ciphertext_len;
+    int decryptedtext_len;
 
-    /* Recording the starting clock tick.*/
-    start = clock();
-    int ciphertext_len = encrypt(plaintext, strlen((char *)plaintext), key, iv, &ciphertext);
-    // Recording the end clock tick.
-    end = clock();
-    if (ciphertext_len < 0) {
-        // Handle encryption error
-        free(plaintext);
-        return 1;
+    for(int i = 0; i < 100; i++) {
+        /* Recording the starting clock tick.*/
+        start = clock();
+        ciphertext_len = encrypt(plaintext, strlen((char *) plaintext), key, iv, &ciphertext);
+        // Recording the end clock tick.
+        end = clock();
+        if (ciphertext_len < 0) {
+            // Handle encryption error
+            free(plaintext);
+            return 1;
+        }
+        // Calculating total time taken by the program.
+        double time_taken = (double)(end - start) / (double)(CLOCKS_PER_SEC);
+        printf("%f\n", time_taken);
     }
-
-    // Calculating total time taken by the program.
-    double time_taken = (double)(end - start) / (double)(CLOCKS_PER_SEC);
-    printf("%f", time_taken);
 
 /*    printf("Ciphertext is:\n");
     BIO_dump_fp(stdout, (const char *)ciphertext, ciphertext_len);*/
 
-    int decryptedtext_len = decrypt(ciphertext, ciphertext_len, key, iv, &decryptedtext);
+    decryptedtext_len = decrypt(ciphertext, ciphertext_len, key, iv, &decryptedtext);
     if (decryptedtext_len < 0) {
         // Handle decryption error
         free(plaintext);
