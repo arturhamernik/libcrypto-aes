@@ -11,16 +11,25 @@ int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
 int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
             unsigned char *iv, unsigned char **plaintext);
 
-int main(void) {
-    // Set up the key and iv...
+int main(int argc, char *argv[]) {
+    /* clock_t clock(void) returns the number of clock ticks
+   elapsed since the program was launched.To get the number
+   of seconds used by the CPU, you will need to divide by
+   CLOCKS_PER_SEC.where CLOCKS_PER_SEC is 1000000 on typical
+   32 bit system.  */
+    if (argc < 3) {
+        fprintf(stderr, "Too few arguments provided to program\n");
+        return -1;
+    }
+
     clock_t start, end;
     // Set up the key and iv...
     unsigned char iv[16]; // For AES, an IV size of 128 bits (16 bytes) is typical.
     generateSecureIV(iv, sizeof(iv));
     //Set up key
-    unsigned char* key = readFile("H:/Praca_dyplomowa/Impl/LibcryptoAES/keys/128.txt");
+    unsigned char* key = readFile(argv[1]);
     //Load plaintext
-    unsigned char* plaintext = readFile("H:/Praca_dyplomowa/Impl/LibcryptoAES/test/100mb.txt");
+    unsigned char* plaintext = readFile(argv[2]);
 
     // Encryption and decryption as before...
     // Dynamically allocate ciphertext buffer based on plaintext size
