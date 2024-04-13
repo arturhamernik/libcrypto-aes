@@ -34,3 +34,14 @@ unsigned char* readFile(const char* filePath) {
     return content;
 }
 
+long charToNumber(char* arg) {
+    char *endptr;
+    long number = strtol(arg, &endptr, 10); // Base 10 for decimal
+
+    if (*endptr != '\0' || endptr == arg) {
+        printf("Invalid integer format: '%s'\n", arg);
+        return 1;
+    }
+
+    return number;
+}
