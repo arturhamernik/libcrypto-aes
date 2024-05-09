@@ -8,9 +8,9 @@
 
 void handleErrors(void);
 int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
-            unsigned char *iv, unsigned char **ciphertext);
+            unsigned char *tag, int tag_len, unsigned char *iv, unsigned char **ciphertext);
 int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
-            unsigned char *iv, unsigned char **plaintext);
+            unsigned char *iv, unsigned char **plaintext, int tag_len);
 
 int main(int argc, char *argv[]) {
     /* clock_t clock(void) returns the number of clock ticks
@@ -30,7 +30,9 @@ int main(int argc, char *argv[]) {
     unsigned char *ciphertext = NULL;
     unsigned char *decryptedText = NULL;
     unsigned char *key;
-    unsigned char iv[16]; // For AES, an IV size of 192 bits (16 bytes) is typical.
+    unsigned char iv[12]; // For AES, an IV size of 192 bits (16 bytes) is typi
+    unsigned char tag[16]; // 16-byte tag for GCM
+    int tag_len = sizeof(tag); // Tag lengthal.
     int desiredKeyLength;
     int ciphertext_len;
     int decryptedText_len;
@@ -44,7 +46,7 @@ int main(int argc, char *argv[]) {
     desiredKeyLength = charToNumber(argv[1]);
 
     if(desiredKeyLength == 128 || desiredKeyLength == 192 || desiredKeyLength == 256) {
-        printf("Chosen algorithm is AES-CBC-%d\n", desiredKeyLength);
+        printf("Chosen algorithm is AES-GCM-%d\n", desiredKeyLength);
     } else {
         fprintf(stderr, "Chosen key length is invalid!");
         return 0;
@@ -61,7 +63,7 @@ int main(int argc, char *argv[]) {
     for(int i = 0; i < 100; i++) {
         /* Recording the starting clock tick.*/
         start = clock();
-        ciphertext_len = encrypt(plainText, strlen((char *) plainText), key, iv, &ciphertext);
+        ciphertext_len = encrypt(plainText, strlen((char *) plainText), key, tag, tag_len, iv, &ciphertext);
         // Recording the end clock tick.
         end = clock();
         if (ciphertext_len < 0) {
@@ -74,10 +76,12 @@ int main(int argc, char *argv[]) {
         printf("%.2f\n", time_taken);
     }
 
-/*    printf("Ciphertext is:\n");
-    BIO_dump_fp(stdout, (const char *)ciphertext, ciphertext_len);*/
+/*
+    printf("Ciphertext is:\n");
+    BIO_dump_fp(stdout, (const char *)ciphertext, ciphertext_len);
+*/
 
-    decryptedText_len = decrypt(ciphertext, ciphertext_len, key, iv, &decryptedText);
+    decryptedText_len = decrypt(ciphertext, ciphertext_len, key, iv, &decryptedText, tag_len);
     if (decryptedText_len < 0) {
         // Handle decryption error
         free(plainText);
@@ -104,22 +108,13 @@ void handleErrors(void)
 }
 
 int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
-            unsigned char *iv, unsigned char **ciphertext) {
+            unsigned char *tag, int tag_len, unsigned char *iv, unsigned char **ciphertext) {
     EVP_CIPHER_CTX *ctx;
     int keyLength = strlen((const char *) key) * 8;
     int len;
     int ciphertext_len;
-    int padding;
 
-    if(keyLength == 128) {
-        padding = EVP_CIPHER_block_size(EVP_aes_128_cbc()); // Padding can be up to one full block
-    } else if(keyLength == 192) {
-        padding = EVP_CIPHER_block_size(EVP_aes_192_cbc()); // Padding can be up to one full block
-    } else {
-        padding = EVP_CIPHER_block_size(EVP_aes_256_cbc()); // Padding can be up to one full block
-    }
-
-    *ciphertext = malloc(plaintext_len + padding); // Allocate memory
+    *ciphertext = malloc(plaintext_len + tag_len); // Allocate memory
     if (*ciphertext == NULL) return -1; // Error handling
 
     /* Create and initialise the context */
@@ -137,11 +132,11 @@ int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
     int encryptInit;
 
     if(keyLength == 128) {
-        encryptInit = EVP_EncryptInit_ex(ctx, EVP_aes_128_cbc(), NULL, key, iv);
+        encryptInit = EVP_EncryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, key, iv);
     } else if(keyLength == 192) {
-        encryptInit = EVP_EncryptInit_ex(ctx, EVP_aes_192_cbc(), NULL, key, iv);
+        encryptInit = EVP_EncryptInit_ex(ctx, EVP_aes_192_gcm(), NULL, key, iv);
     } else {
-        encryptInit = EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
+        encryptInit = EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, key, iv);
     }
 
     if(encryptInit != 1) {
@@ -166,6 +161,11 @@ int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
     }
     ciphertext_len += len;
 
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, tag_len, *ciphertext + ciphertext_len) != 1) {
+        handleErrors();
+    }
+    ciphertext_len += tag_len;
+
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
 
@@ -174,26 +174,17 @@ int encrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
 
 
 int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
-            unsigned char *iv, unsigned char **plaintext)
+            unsigned char *iv, unsigned char **plaintext, int tag_len)
 {
     EVP_CIPHER_CTX *ctx;
     int keyLength = strlen((const char *) key) * 8;
     int len;
     int plaintext_len;
-    int padding;
+    if (ciphertext_len < tag_len) return -1; // Not enough data for tag
 
-    if(keyLength == 128) {
-        padding = EVP_CIPHER_block_size(EVP_aes_128_cbc()); // Padding can be up to one full block
-    } else if(keyLength == 192) {
-        padding = EVP_CIPHER_block_size(EVP_aes_192_cbc()); // Padding can be up to one full block
-    } else {
-        padding = EVP_CIPHER_block_size(EVP_aes_256_cbc()); // Padding can be up to one full block
-    }
-
-    *plaintext = malloc(ciphertext_len + padding); // Allocate memory
+    *plaintext = malloc(ciphertext_len); // Allocate memory
 
     if (*plaintext == NULL) return -1; // Error handling
-
 
     /* Create and initialise the context */
     if(!(ctx = EVP_CIPHER_CTX_new()))
@@ -209,11 +200,11 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
     int decryptInit;
 
     if(keyLength == 128) {
-        decryptInit = EVP_DecryptInit_ex(ctx, EVP_aes_128_cbc(), NULL, key, iv);
+        decryptInit = EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, key, iv);
     } else if(keyLength == 192) {
-        decryptInit = EVP_DecryptInit_ex(ctx, EVP_aes_192_cbc(), NULL, key, iv);
+        decryptInit = EVP_DecryptInit_ex(ctx, EVP_aes_192_gcm(), NULL, key, iv);
     } else {
-        decryptInit = EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);
+        decryptInit = EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, key, iv);
     }
 
     if(decryptInit != 1) {
@@ -224,10 +215,15 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
      * Provide the message to be decrypted, and obtain the plaintext output.
      * EVP_DecryptUpdate can be called multiple times if necessary.
      */
-    if(EVP_DecryptUpdate(ctx, *plaintext, &len, ciphertext, ciphertext_len) != 1) {
+    if(EVP_DecryptUpdate(ctx, *plaintext, &len, ciphertext, ciphertext_len - tag_len) != 1) {
         handleErrors();
     }
     plaintext_len = len;
+
+    // Set expected tag value
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, tag_len, ciphertext + ciphertext_len - tag_len) != 1) {
+        handleErrors();
+    }
 
     /*
      * Finalise the decryption. Further plaintext bytes may be written at

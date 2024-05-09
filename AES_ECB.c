@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         // Calculating total time taken by the program.
-        time_taken = (double)(end - start) / (double)(CLOCKS_PER_SEC);
+        time_taken = (double)(end - start) * 1000 / (double)(CLOCKS_PER_SEC);
         printf("%f\n", time_taken);
     }
 
