@@ -34,6 +34,34 @@ unsigned char* readFile(const char* filePath) {
     return content;
 }
 
+int saveToFile(const char* filePath, const char* data) {
+    // Open the file for writing in binary mode
+    FILE *file = fopen(filePath, "wb");
+    if (file == NULL) {
+        perror("Failed to open file");
+        return -1;
+    }
+
+    // Get the length of the data
+    size_t dataSize = 0;
+    while (data[dataSize] != '\0') {
+        dataSize++;
+    }
+
+    // Write the data to the file
+    size_t written = fwrite(data, sizeof(char), dataSize, file);
+    if (written != dataSize) {
+        perror("Failed to write data to file");
+        fclose(file);
+        return -1;
+    }
+
+    // Close the file
+    fclose(file);
+
+    return 0;
+}
+
 long charToNumber(char* arg) {
     char *endptr;
     long number = strtol(arg, &endptr, 10); // Base 10 for decimal

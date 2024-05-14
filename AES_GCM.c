@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
    of seconds used by the CPU, you will need to divide by
    CLOCKS_PER_SEC.where CLOCKS_PER_SEC is 1000000 on typical
    32 bit system.  */
-    if (argc < 3) {
+    if (argc < 5) {
         fprintf(stderr, "Too few arguments provided to program\n");
         return -1;
     }
@@ -76,10 +76,9 @@ int main(int argc, char *argv[]) {
         printf("%.2f\n", time_taken);
     }
 
-/*
-    printf("Ciphertext is:\n");
-    BIO_dump_fp(stdout, (const char *)ciphertext, ciphertext_len);
-*/
+/*    printf("Ciphertext is:\n");*/
+    // Save Ciphertext to file
+    BIO_dump_fp(fopen(argv[3], "wb"), (const char *)ciphertext, ciphertext_len);
 
     decryptedText_len = decrypt(ciphertext, ciphertext_len, key, iv, &decryptedText, tag_len);
     if (decryptedText_len < 0) {
@@ -92,6 +91,8 @@ int main(int argc, char *argv[]) {
     decryptedText[decryptedText_len] = '\0'; // Null-terminate the decrypted text
 /*    printf("Decrypted text is:\n");
     printf("%s\n", decryptedText);*/
+    // Save decrypted text to file
+    saveToFile(argv[4], (const char *)decryptedText);
 
     // Free the allocated buffers
     free(plainText);

@@ -71,9 +71,9 @@ int main(int argc, char *argv[]) {
         printf("%f\n", time_taken);
     }
 
-/*    printf("Ciphertext is:\n");
-    BIO_dump_fp(stdout, (const char *)ciphertext, ciphertext_len);*/
-
+/*    printf("Ciphertext is:\n");*/
+    // Save Ciphertext to file
+    BIO_dump_fp(fopen(argv[3], "wb"), (const char *)ciphertext, ciphertext_len);
     decryptedText_len = decrypt(ciphertext, ciphertext_len, key, &decryptedText);
     if (decryptedText_len < 0) {
         // Handle decryption error
@@ -85,6 +85,8 @@ int main(int argc, char *argv[]) {
     decryptedText[decryptedText_len] = '\0'; // Null-terminate the decrypted text
 /*    printf("Decrypted text is:\n");
     printf("%s\n", decryptedText);*/
+    // Save decrypted text to file
+    saveToFile(argv[4], (const char *)decryptedText);
 
     // Free the allocated buffers
     free(plainText);
