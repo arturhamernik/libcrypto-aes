@@ -14,7 +14,7 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
 
 int main(int argc, char *argv[]) {
     // Check if number of arguments is ok
-    if (argc < 3) {
+    if (argc < 5) {
         fprintf(stderr, "Too few arguments provided to program\n");
         return -1;
     }
