@@ -13,19 +13,14 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
             unsigned char **plaintext);
 
 int main(int argc, char *argv[]) {
-    /* clock_t clock(void) returns the number of clock ticks
-   elapsed since the program was launched.To get the number
-   of seconds used by the CPU, you will need to divide by
-   CLOCKS_PER_SEC.where CLOCKS_PER_SEC is 1000000 on typical
-   32 bit system.  */
+    // Check if number of arguments is ok
     if (argc < 3) {
         fprintf(stderr, "Too few arguments provided to program\n");
         return -1;
     }
 
+    // Define variables
     clock_t start, end;
-    // Encryption and decryption as before...
-    // Dynamically allocate ciphertext buffer based on plainText size
     unsigned char *plainText;
     unsigned char *ciphertext = NULL;
     unsigned char *decryptedText = NULL;
@@ -35,9 +30,9 @@ int main(int argc, char *argv[]) {
     int decryptedText_len;
     double time_taken;
 
-    //Load plainText
+    // Load plainText
     plainText = readFile(argv[2]);
-    //Set up key
+    // Set up key
     desiredKeyLength = charToNumber(argv[1]);
 
     if(desiredKeyLength == 128 || desiredKeyLength == 192 || desiredKeyLength == 256) {
@@ -58,9 +53,11 @@ int main(int argc, char *argv[]) {
     for(int i = 0; i < 100; i++) {
         /* Recording the starting clock tick.*/
         start = clock();
+        // Encryption
         ciphertext_len = encrypt(plainText, strlen((char *) plainText), key, &ciphertext);
         // Recording the end clock tick.
         end = clock();
+        // Check if encrypted correctly
         if (ciphertext_len < 0) {
             // Handle encryption error
             free(plainText);
@@ -71,10 +68,12 @@ int main(int argc, char *argv[]) {
         printf("%f\n", time_taken);
     }
 
-/*    printf("Ciphertext is:\n");*/
     // Save Ciphertext to file
     BIO_dump_fp(fopen(argv[3], "wb"), (const char *)ciphertext, ciphertext_len);
+
+    // Decryption
     decryptedText_len = decrypt(ciphertext, ciphertext_len, key, &decryptedText);
+    // Check if decrypted correctly
     if (decryptedText_len < 0) {
         // Handle decryption error
         free(plainText);
@@ -82,9 +81,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    decryptedText[decryptedText_len] = '\0'; // Null-terminate the decrypted text
-/*    printf("Decrypted text is:\n");
-    printf("%s\n", decryptedText);*/
+    // Null-terminate the decrypted text
+    decryptedText[decryptedText_len] = '\0';
+
     // Save decrypted text to file
     saveToFile(argv[4], (const char *)decryptedText);
 
@@ -92,6 +91,7 @@ int main(int argc, char *argv[]) {
     free(plainText);
     free(ciphertext);
     free(decryptedText);
+    free(key);
 
     return 0;
 }
